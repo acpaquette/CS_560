@@ -38,7 +38,7 @@ def main(args):
 
                 for op in op_list:
                     split_input = op_input.split(op)
-                    if len(split_input) > 1 and not exit_op:
+                    if len(split_input) == 2 and not exit_op:
                         if len(split_input[0]) > 0 and len(split_input[1]) > 0:
                             break
 
@@ -59,7 +59,7 @@ def main(args):
 
                 if op != 'q':
                     data = s.recv(1024)
-                    print('Result {0:.15f}'.format(float(data.decode(encoding='UTF-8',errors='strict').split('\n')[0])))
+                    print('Result {0:.15f}'.format(float(data.decode(encoding='UTF-8', errors='strict').split('\n')[0])))
 
             except Exception as e:
                 print(e)
