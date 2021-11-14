@@ -26,27 +26,26 @@ def main(args):
             try:
                 op_input = input('Enter function to process (num op num): ')
 
+                op_list = ['+', '-', '*', '/', '^', 'q']
+
                 if (op_input == 'q'):
                     exit_op = True
-                    op_input = '0.0 q 0.0'
+                    op_input = '0.0q0.0'
 
                 if ('sqrt of' in op_input):
                     split_input = op_input.split(" ")
-                    op_input = split_input[-1] + " ^ " + str(0.5)
+                    op_input = split_input[-1] + "^" + str(0.5)
 
-                split_input = op_input.split(" ")
+                for op in op_list:
+                    split_input = op_input.split(op)
+                    if len(split_input) > 1 and not exit_op:
+                        break
 
-                if (len(split_input) < 3) and not exit_op:
-                    raise Exception('Bad Input', 'User input does not meet critia for protocol, enter equation as num op num')
-
-                op_list = ['+', '-', '*', '/', '^', 'q']
+                if (len(split_input) < 2) and not exit_op:
+                    raise Exception('Bad Input', 'User input does not meet critia for protocol. User likely did not enter supported op from the followng {}'.format(op_list))
 
                 num1 = float(split_input[0])
-                if split_input[1] in op_list:
-                    op = split_input[1]
-                else:
-                    raise ValueError('Bad Input', "User entered bad op '{}'".format(split_input[1]))
-                num2 = float(split_input[2])
+                num2 = float(split_input[1])
 
                 if op == '/' and num2 == 0.0:
                     raise ValueError('Bad Input', "Cannot divide by 0")
