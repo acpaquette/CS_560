@@ -59,7 +59,7 @@ def main(args):
 
                 if op != 'q':
                     data = s.recv(1024)
-                    print('Result {0:.16f}'.format(float(data.decode(encoding='UTF-8',errors='strict').split('\n')[0])))
+                    print('Result {0:.15f}'.format(float(data.decode(encoding='UTF-8',errors='strict').split('\n')[0])))
 
             except Exception as e:
                 print(e)

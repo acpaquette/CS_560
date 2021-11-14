@@ -104,8 +104,8 @@ void* handle_client(void* socket_addr) {
         sscanf(whole_op, "%c %lf %lf", &op, &num1, &num2);
 
         printf("Recieved op: %c\n", op);
-        printf("Translated num1: %.14f\n", num1);
-        printf("Translated num2: %.14f\n", num2);
+        printf("Translated num1: %.15f\n", num1);
+        printf("Translated num2: %.15f\n", num2);
 
         free(whole_op);
 
@@ -135,15 +135,20 @@ void* handle_client(void* socket_addr) {
             break;
         }
 
-        printf("Result: %.14f\n", res);
+        printf("Result: %.15f\n", res);
 
         // send result back to client
         int buffer_size = 100;
         char buf[buffer_size];
-        std::sprintf(buf, "%.18g", res);
-        std::string final_res = std::string(buf);
-        printf("Sending back: %s\n\n", final_res.c_str());
-        write(client_socket, final_res.c_str(), final_res.length());
+        snprintf(buf, buffer_size, "%.15f\n", res);
+        int i = 0;
+        for (; i < buffer_size; i++) {
+          if (buf[i] == '\n') {
+            break;
+          }
+        }
+        printf("Sending back: %s", buf);
+        write(client_socket, &buf, sizeof(char) * i);
     }
 
     // cleanup
