@@ -39,7 +39,8 @@ def main(args):
                 for op in op_list:
                     split_input = op_input.split(op)
                     if len(split_input) > 1 and not exit_op:
-                        break
+                        if len(split_input[0]) > 0 and len(split_input[1]) > 0:
+                            break
 
                 if (len(split_input) < 2) and not exit_op:
                     raise Exception('Bad Input', 'User input does not meet critia for protocol. User likely did not enter supported op from the followng {}'.format(op_list))
