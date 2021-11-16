@@ -27,48 +27,57 @@ def main(args):
     online = args.online
     exit_op = False
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    except:
+        print("Connection failed.")
+        return
 
-        while not exit_op:
+    s.connect((HOST, PORT))
 
-            try:
-                op_input = input('Enter function to process (num op num): ')
+    while not exit_op:
 
-                op_list = ['+', '-', '*', '/', '^', 'q']
+        try:
+            op_input = input('Enter function to process (num op num): ')
 
-                if (op_input == 'q'):
-                    exit_op = True
-                    op_input = '0.0q0.0'
+            op_list = ['+', '-', '*', '/', '^', 'q']
 
-                if ('sqrt of' in op_input):
-                    split_input = op_input.split(" ")
-                    op_input = split_input[-1] + "^" + str(0.5)
+            if (op_input == 'q'):
+                exit_op = True
+                op_input = '0.0q0.0'
 
-                for op in op_list:
-                    split_input = op_input.split(op)
-                    if len(split_input) == 2 and not exit_op:
-                        if len(split_input[0]) > 0 and len(split_input[1]) > 0:
-                            break
+            if ('sqrt of' in op_input):
+                split_input = op_input.split(" ")
+                op_input = split_input[-1] + "^" + str(0.5)
 
-                if (len(split_input) < 2) and not exit_op:
-                    raise Exception('Bad Input', 'User input does not meet critia for protocol. User likely did not enter supported op from the followng {}'.format(op_list))
+            for op in op_list:
+                split_input = op_input.split(op)
+                if len(split_input) == 2 and not exit_op:
+                    if len(split_input[0]) > 0 and len(split_input[1]) > 0:
+                        break
 
-                num1 = float(split_input[0])
-                num2 = float(split_input[1])
+            if (len(split_input) < 2) and not exit_op:
+                raise Exception('Bad Input', 'User input does not meet critia for protocol. User likely did not enter supported op from the followng {}'.format(op_list))
 
-                if op == '/' and num2 == 0.0:
-                    raise ValueError('Bad Input', "Cannot divide by 0")
+            num1 = float(split_input[0])
+            num2 = float(split_input[1])
 
-                if op == '^' and (num1 < 0 and num2 < 1):
-                    raise ValueError('Bad Input', "Cannot take the square root of a negative number")
+            if op == '/' and num2 == 0.0:
+                raise ValueError('Bad Input', "Cannot divide by 0")
 
-                perform_calculation(s, op, num1, num2)
+            if op == '^' and (num1 < 0 and num2 < 1):
+                raise ValueError('Bad Input', "Cannot take the square root of a negative number")
 
-            except Exception as e:
-                print(e)
-                print("Please try a different input set")
-                continue
+            answer_data = perform_calculation(s, op, num1, num2)
+
+            if answer_data:
+                print('Result {0:.15f}'.format(float(answer_data.decode(encoding='UTF-8', errors='strict').split('\n')[0])))
+
+
+        except Exception as e:
+            print(e)
+            print("Please try a different input set")
+            continue
 
 if __name__ == '__main__':
     main(parse_args())
