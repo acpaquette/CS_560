@@ -1,5 +1,6 @@
 import socket
 import argparse
+import time
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Setup the client')
@@ -11,29 +12,34 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def perform_calculation(s, op, num1, num2):
-    op_to_send = "{} {} {} \n".format(op, num1, num2)
-    s.sendall(op_to_send.encode('utf-8'))
+def perform_calculation(s, creds, op, num1, num2):
+    op_to_send = "{} {} {} \n".format(op, num1, num2).encode('utf-8')
 
-    if op != 'q':
-        data = s.recv(1024)
-        print('Result {0:.15f}'.format(float(data.decode(encoding='UTF-8', errors='strict').split('\n')[0])))
+    while True:
+        s.sendto(op_to_send, creds)
+
+        if op == 'q':
+            return b''
+
+        time.sleep(0.1)
+
+        data = s.recvfrom(1024, creds)
+        if data[-1] == b'\n':
+            return data
 
 
 HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT = 23657        # The port used by the server
 
 def main(args):
-    online = args.online
     exit_op = False
+    creds = (HOST,PORT)
 
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except:
         print("Connection failed.")
         return
-
-    s.connect((HOST, PORT))
 
     while not exit_op:
 
@@ -68,7 +74,7 @@ def main(args):
             if op == '^' and (num1 < 0 and num2 < 1):
                 raise ValueError('Bad Input', "Cannot take the square root of a negative number")
 
-            answer_data = perform_calculation(s, op, num1, num2)
+            answer_data = perform_calculation(s,creds, op, num1, num2)
 
             if answer_data:
                 print('Result {0:.15f}'.format(float(answer_data.decode(encoding='UTF-8', errors='strict').split('\n')[0])))
