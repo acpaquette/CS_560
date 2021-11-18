@@ -160,7 +160,7 @@ void* handle_client(void* socket_addr) {
 	printf("Sending back: %s", buf);
 
 	socklen_t addr_size = sizeof(client_conn->address);
-	sendto(client_conn->server_socket, &buf, sizeof(char) * i, 0,
+	sendto(client_conn->server_socket, &buf, sizeof(char) * i + 1, 0,
 		   &client_conn->address, addr_size);
 
 	free(client_conn);
