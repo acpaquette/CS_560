@@ -23,8 +23,8 @@ def perform_calculation(s, creds, op, num1, num2):
 
         time.sleep(0.1)
 
-        data = s.recvfrom(1024, creds)
-        if data[-1] == b'\n':
+        data, addr = s.recvfrom(1024, creds[1])
+        if data[-1:] == b'\n':
             return data
 
 
