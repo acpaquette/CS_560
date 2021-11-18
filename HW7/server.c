@@ -1,5 +1,12 @@
 #include "server.h"
 
+typedef struct client_connection {
+	int server_socket;
+	char buff[CONNECTION_BUFF_LEN];
+	ssize_t msg_size;
+	struct sockaddr address;
+} client_connection;
+
 /************************************************************************
  * MAIN
  ************************************************************************/
@@ -13,7 +20,7 @@ int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
 
     // create unnamed network socket for server to listen on
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((server_socket = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         perror("Error creating socket");
         exit(EXIT_FAILURE);
     }
@@ -29,25 +36,33 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    // listen for client connections (pending connections get put into a queue)
-    if (listen(server_socket, NUM_CONNECTIONS) == -1) {
-        perror("Error listening on socket");
-        exit(EXIT_FAILURE);
-    }
-
     // server loop
     while (TRUE) {
 
         // accept connection to client
-        if ((client_socket = accept(server_socket, NULL, NULL)) == -1) {
-            perror("Error accepting client");
-        } else {
-            printf("\nAccepted client\n");
-      			pthread_t thread = 0;
-      			if (pthread_create(&thread, NULL, &handle_client, (void*) &client_socket) != 0) {
-      				perror("Error creating thread");
-      			}
-        }
+		client_connection* conn = (client_connection*)malloc(sizeof(*conn));
+
+		socklen_t addr_size = sizeof(conn->address);
+		conn->server_socket = server_socket;
+		conn->msg_size = recvfrom(server_socket, conn->buff, CONNECTION_BUFF_LEN, MSG_WAITALL,&conn->address, &addr_size);
+
+		printf("\nAccepted client\n");
+		if (conn->buff[0] == 'q') {
+			// cleanup
+			if (close(server_socket) == -1) {
+				perror("Error closing socket\n");
+				exit(EXIT_FAILURE);
+			} else {
+				printf("Closed socket to client, exit\n");
+				exit(EXIT_SUCCESS);
+			}
+
+		}
+
+		pthread_t thread = 0;
+		if (pthread_create(&thread, NULL, &handle_client, (void*) conn) != 0) {
+			perror("Error creating thread");
+		}
     }
 }
 
@@ -89,79 +104,65 @@ char * read_until_new_line(int client_socket, int size) {
  ************************************************************************/
 
 void* handle_client(void* socket_addr) {
-    int client_socket = *((int*) socket_addr);
+    client_connection* client_conn = (client_connection*) socket_addr;
     int keep_going = TRUE;
 
-    while (keep_going) {
-        printf("Waiting for new op...\n");
-        char * whole_op = read_until_new_line(client_socket, 21);
-        printf("%s", whole_op);
+	char * whole_op = client_conn->buff;
+	printf("%s", whole_op);
 
-        char op = '\0';
-        double num1 = 0.0;
-        double num2 = 0.0;
+	char op = '\0';
+	double num1 = 0.0;
+	double num2 = 0.0;
 
-        int parsed = sscanf(whole_op, "%c %lf %lf", &op, &num1, &num2);
-		if (parsed != 3) {
-			printf("Bad request\n");
-			continue;
+	int parsed = sscanf(whole_op, "%c %lf %lf", &op, &num1, &num2);
+	if (parsed != 3) {
+		printf("Bad request\n");
+		return NULL;
+	}
+
+	printf("Received op: %c\n", op);
+	printf("Translated num1: %.15f\n", num1);
+	printf("Translated num2: %.15f\n", num2);
+
+	double res = 0.0;
+
+	switch (op) {
+	case '+':
+		res =  num1 +  num2;
+		break;
+	case '-':
+		res =  num1 -  num2;
+		break;
+	case '*':
+		res =  num1 *  num2;
+		break;
+	case '/':
+		res =  num1 /  num2;
+		break;
+	case '^':
+		res = pow(num1, num2);
+		break;
+	}
+
+	printf("Result: %.15f\n", res);
+
+	// send result back to client
+	int buffer_size = 100;
+	char buf[buffer_size];
+	snprintf(buf, buffer_size, "%.15f\n", res);
+	int i = 0;
+	for (; i < buffer_size; i++) {
+		if (buf[i] == '\n') {
+            break;
 		}
+	}
 
-        printf("Recieved op: %c\n", op);
-        printf("Translated num1: %.15f\n", num1);
-        printf("Translated num2: %.15f\n", num2);
+	printf("Sending back: %s", buf);
 
-        free(whole_op);
+	socklen_t addr_size = sizeof(client_conn->address);
+	sendto(client_conn->server_socket, &buf, sizeof(char) * i, 0,
+		   &client_conn->address, addr_size);
 
-        // check if we terminate
-        if (op == 'q') {
-          printf("Quiting\n");
-          break;
-        }
-
-        double res = 0.0;
-
-        switch (op) {
-          case '+':
-            res =  num1 +  num2;
-            break;
-          case '-':
-            res =  num1 -  num2;
-            break;
-          case '*':
-            res =  num1 *  num2;
-            break;
-          case '/':
-            res =  num1 /  num2;
-            break;
-          case '^':
-            res = pow(num1, num2);
-            break;
-        }
-
-        printf("Result: %.15f\n", res);
-
-        // send result back to client
-        int buffer_size = 100;
-        char buf[buffer_size];
-        snprintf(buf, buffer_size, "%.15f\n", res);
-        int i = 0;
-        for (; i < buffer_size; i++) {
-          if (buf[i] == '\n') {
-            break;
-          }
-        }
-        printf("Sending back: %s", buf);
-        write(client_socket, &buf, sizeof(char) * i);
-    }
-
-    // cleanup
-    if (close(client_socket) == -1) {
-        perror("Error closing socket\n");
-        exit(EXIT_FAILURE);
-    } else {
-        printf("Closed socket to client, exit\n");
-        exit(EXIT_SUCCESS);
-    }
+	free(client_conn);
     return NULL;
 }
